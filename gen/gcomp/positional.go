@@ -29,12 +29,14 @@ func positionals(comps *comp.Carapace, tag tag.MultiTag, val reflect.Value) (boo
 
 	// Find all completer implementations, or
 	// build ones based on struct tag specs.
-	getCompleters(positionals, comps)
+	// Put them in a cache of completion callbacks that is accessed
+	// by all positional arguments in order to use their completions.
+	completionCache := getCompleters(positionals, comps)
 
 	// Once we a have a list of positionals, completers for each,
 	// and the number of arguments required, we can build a single
 	// completion handler, similar to our ValidArgs function handler
-	handler := positionalCompleter(positionals, reqTotal)
+	handler := positionalCompleter(positionals, completionCache, reqTotal)
 
 	// And bind this positional completer to our command
 	comps.PositionalAnyCompletion(comp.ActionCallback(handler))
@@ -44,11 +46,14 @@ func positionals(comps *comp.Carapace, tag tag.MultiTag, val reflect.Value) (boo
 
 // getCompleters populates the completers for each positional argument in
 // a list of them, through either implemented methods or struct tag specs.
-func getCompleters(positionals []*positional.Arg, comps *comp.Carapace) {
-	for _, arg := range positionals {
+func getCompleters(args []*positional.Arg, comps *comp.Carapace) *cacheComp {
+	// The cache stores all completer functions, to be used later.
+	cache := newCompletionCache(args)
+
+	for _, arg := range args {
 		// Make parser function, get completer implementations, how many arguments, etc.
 		if completer := typeCompleter(arg.Value); completer != nil {
-			// arg.completer = completer
+			cache.add(arg.Index, completer)
 
 			// Always overwrite the after-dash completion if this argument field is
 			// being indicated as such through its struct tag.
@@ -59,20 +64,20 @@ func getCompleters(positionals []*positional.Arg, comps *comp.Carapace) {
 
 		// But struct tags have precedence, so here should take place
 		// most of the work, since it's quite easy to specify powerful completions.
+		if completer, found := taggedCompletions(arg.Tag); found {
+			cache.add(arg.Index, completer)
+		}
 	}
+
+	return cache
 }
 
 // positionalCompleter builds a handler that is used to concurrently analyze
 // the positional words of the command line, and to propose completions with the
 // most educated guess possible: arguments know a lot, and they can even try to
 // actually convert their values to verify if their type/value is good.
-func positionalCompleter(args []*positional.Arg, needed int) comp.CompletionCallback {
+func positionalCompleter(args []*positional.Arg, cache *cacheComp, needed int) comp.CompletionCallback {
 	handler := func(ctx comp.Context) comp.Action {
-		// A cache of completion callbacks that is accessed
-		// by all positional arguments in order to store their
-		// completions.
-		comps := &cache{}
-
 		// All positionals work concurrently
 		compWorkers := &sync.WaitGroup{}
 
@@ -80,7 +85,7 @@ func positionalCompleter(args []*positional.Arg, needed int) comp.CompletionCall
 			compWorkers.Add(1)
 
 			// Each argument processes a copy of the words concurently.
-			go func(arg *positional.Arg, comps *cache, wg *sync.WaitGroup) {
+			go func(arg *positional.Arg, wg *sync.WaitGroup) {
 				defer wg.Done()
 
 				// If we don't have enough words for even
@@ -94,14 +99,14 @@ func positionalCompleter(args []*positional.Arg, needed int) comp.CompletionCall
 				words := positional.GetWords(*arg, ctx.Args, needed)
 
 				// The argument will loop over all the argument words
-				if err := consumeWords(arg, words, comps); err != nil {
+				if err := consumeWords(arg, words, cache); err != nil {
 					// An error is often unrecoverable, so we should
 					// probably break and populate the completions with
 					// the appropriate error message.
 					// TODO: error message to comps
 					return
 				}
-			}(arg, comps, compWorkers)
+			}(arg, compWorkers)
 		}
 
 		// Wait until all of our positional arguments have
@@ -112,7 +117,7 @@ func positionalCompleter(args []*positional.Arg, needed int) comp.CompletionCall
 		// We are done processing some/all of the positional words.
 		// The cache contains all the completions it needs, so we
 		// just unload them into one action to be returned
-		return comps.flush()
+		return cache.flush(ctx)
 	}
 
 	return handler
@@ -120,7 +125,7 @@ func positionalCompleter(args []*positional.Arg, needed int) comp.CompletionCall
 
 // consumeWords is called on each positional argument, so that it can consume
 // one/more of the positional words and add completions to the cache if needed.
-func consumeWords(arg *positional.Arg, stack *positional.Words, comps *cache) error {
+func consumeWords(arg *positional.Arg, stack *positional.Words, comps *cacheComp) error {
 	// Always complete if we have no maximum
 	if arg.Maximum == -1 {
 		return completeOrIgnore(arg, comps, 0)
@@ -165,7 +170,7 @@ func consumeWords(arg *positional.Arg, stack *positional.Words, comps *cache) er
 }
 
 // completeOrIgnore finally takes the decision of completing this positional or not.
-func completeOrIgnore(arg *positional.Arg, comps *cache, actuallyParsed int) error {
+func completeOrIgnore(arg *positional.Arg, comps *cacheComp, actuallyParsed int) error {
 	mustComplete := false
 
 	switch {
@@ -184,25 +189,10 @@ func completeOrIgnore(arg *positional.Arg, comps *cache, actuallyParsed int) err
 
 	// If something has said we must, cache the comps.
 	if mustComplete {
-		// comps.add(arg.completer)
+		comps.useCompleter(arg.Index)
 	}
 
 	return nil
-}
-
-func stillRequired(p positional.Arg, parsed int) int {
-	switch {
-	case p.Maximum != -1:
-		// We either want this completer to be active
-		// for n following positional words...
-		return (p.Maximum - parsed)
-	case parsed < p.Minimum:
-		// Or we want this completer to be at least
-		return p.Minimum - parsed
-	default:
-		// Or we need it ad eternam
-		return -1
-	}
 }
 
 func isDashPositionalAny(tag tag.MultiTag) bool {
@@ -210,29 +200,58 @@ func isDashPositionalAny(tag tag.MultiTag) bool {
 
 	// TODO: here extract all complete directives
 
-	if isDashAny == "" {
-		return false
-	}
-
-	return true
+	return isDashAny != ""
 }
 
 // a list used to store completion callbacks produced by our
 // positional arguments' slots at some point in the process.
-type cache []comp.CompletionCallback
-
-func (c *cache) add(comps ...comp.CompletionCallback) {
-	*c = append(*c, comps...)
+type cacheComp struct {
+	// All positionals have given their completers
+	// before running, so we can access them
+	completers *map[int]comp.CompletionCallback
+	// And the cache is the list of completion callbacks
+	// we will actually use when exiting the full process.
+	cache []comp.CompletionCallback
 }
 
-func (c *cache) flush() (action comp.Action) {
+func newCompletionCache(args []*positional.Arg) *cacheComp {
+	return &cacheComp{
+		completers: &map[int]comp.CompletionCallback{},
+	}
+}
+
+func (c *cacheComp) add(index int, cb comp.CompletionCallback) {
+	(*c.completers)[index] = cb
+}
+
+func (c *cacheComp) useCompleter(index int) {
+	completer, found := (*c.completers)[index]
+	if found {
+		c.cache = append(c.cache, completer)
+	}
+}
+
+// flush returns all the completions cached by our positional arguments,
+// so we invoke each of them with the context so that they can perform
+// so filtering tasks if they need to.
+func (c *cacheComp) flush(ctx comp.Context) (action comp.Action) {
 	actions := make([]comp.Action, 0)
 
 	// fixed-max positional completers
-	for _, cb := range *c {
+	for _, cb := range c.cache {
 		actions = append(actions, comp.ActionCallback(cb))
 	}
 
+	// Each of the completers should invoke with
+	// the context so that they can filter out
+	// the candidates that are already present.
+	processed := make([]comp.Action, 0)
+
+	for _, completion := range actions {
+		completion = completion.Invoke(ctx).Filter(ctx.Args).ToA()
+		processed = append(processed, completion)
+	}
+
 	// Let carapace merge all of our callbacks.
-	return comp.Batch(actions...).ToA()
+	return comp.Batch(processed...).ToA()
 }

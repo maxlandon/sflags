@@ -97,7 +97,7 @@ func addFlagComps(comps *comp.Carapace, mtag tag.MultiTag, data interface{}) err
 	}
 
 	// All completions for this flag set
-	var flagCompletions comp.ActionMap
+	flagCompletions := make(map[string]comp.Action)
 
 	// The handler will append to the completions map as each flag is parsed
 	compScanner := flagCompsScanner(&flagCompletions)
@@ -113,18 +113,14 @@ func addFlagComps(comps *comp.Carapace, mtag tag.MultiTag, data interface{}) err
 	// If we are done parsing the flags without error and we have
 	// some completers found on them (implemented or tagged), bind them.
 	if len(flagCompletions) > 0 {
-		comps.FlagCompletion(flagCompletions)
+		comps.FlagCompletion(comp.ActionMap(flagCompletions))
 	}
 
 	return nil
 }
 
-func isStringFalsy(s string) bool {
-	return s == "" || s == "false" || s == "no" || s == "0"
-}
-
 // flagCompsScanner builds a scanner that will register some completers for an option flag.
-func flagCompsScanner(actions *comp.ActionMap) sflags.FlagFunc {
+func flagCompsScanner(actions *map[string]comp.Action) sflags.FlagFunc {
 	handler := func(flag string, tag tag.MultiTag, val reflect.Value) (err error) {
 		// First bind any completer implementation if found
 		if completer := typeCompleter(val); completer != nil {
@@ -132,14 +128,18 @@ func flagCompsScanner(actions *comp.ActionMap) sflags.FlagFunc {
 		}
 
 		// Then, check for tags that will override the implementation.
-		if action, found := taggedCompletions(tag); found {
-			(*actions)[flag] = action
+		if completer, found := taggedCompletions(tag); found {
+			(*actions)[flag] = comp.ActionCallback(completer)
 		}
 
 		return nil
 	}
 
 	return handler
+}
+
+func isStringFalsy(s string) bool {
+	return s == "" || s == "false" || s == "no" || s == "0"
 }
 
 // scanOption finds if a field is marked as an option, and if yes, scans it and stores the object.
