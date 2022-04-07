@@ -46,7 +46,8 @@ func TestParse(t *testing.T) {
 				CounterValue1: 3,
 
 				StringSliceValue1: []string{
-					"one2", "two2", "three", "4"},
+					"one2", "two2", "three", "4",
+				},
 			},
 			args: []string{
 				"--string-value1", "string_value1_value2",
@@ -94,7 +95,7 @@ func TestParse(t *testing.T) {
 				"--string-value1", "string_value1_value2",
 				"--string-value-two", "string_value2_value2",
 				// kingpin can't pass value for boolean arguments.
-				//"--counter-value1", "2",
+				// "--counter-value1", "2",
 				"--counter-value1",
 			},
 		},

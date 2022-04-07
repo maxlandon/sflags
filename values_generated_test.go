@@ -31,7 +31,6 @@ func TestStringValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "string", v.Type())
 	})
-
 }
 
 func TestStringSliceValue_Zero(t *testing.T) {
@@ -157,7 +156,6 @@ func TestStringSliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "stringSlice", v.Type())
 	})
-
 }
 
 func TestStringStringMapValue(t *testing.T) {
@@ -665,7 +663,6 @@ func TestBoolValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "bool", v.Type())
 	})
-
 }
 
 func TestBoolSliceValue_Zero(t *testing.T) {
@@ -803,7 +800,6 @@ func TestBoolSliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "boolSlice", v.Type())
 	})
-
 }
 
 func TestStringBoolMapValue(t *testing.T) {
@@ -1301,7 +1297,6 @@ func TestUintValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "uint", v.Type())
 	})
-
 }
 
 func TestUintSliceValue_Zero(t *testing.T) {
@@ -1439,7 +1434,6 @@ func TestUintSliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "uintSlice", v.Type())
 	})
-
 }
 
 func TestStringUintMapValue(t *testing.T) {
@@ -1937,7 +1931,6 @@ func TestUint8Value(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "uint8", v.Type())
 	})
-
 }
 
 func TestUint8SliceValue_Zero(t *testing.T) {
@@ -2075,7 +2068,6 @@ func TestUint8SliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "uint8Slice", v.Type())
 	})
-
 }
 
 func TestStringUint8MapValue(t *testing.T) {
@@ -2573,7 +2565,6 @@ func TestUint16Value(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "uint16", v.Type())
 	})
-
 }
 
 func TestUint16SliceValue_Zero(t *testing.T) {
@@ -2711,7 +2702,6 @@ func TestUint16SliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "uint16Slice", v.Type())
 	})
-
 }
 
 func TestStringUint16MapValue(t *testing.T) {
@@ -3209,7 +3199,6 @@ func TestUint32Value(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "uint32", v.Type())
 	})
-
 }
 
 func TestUint32SliceValue_Zero(t *testing.T) {
@@ -3347,7 +3336,6 @@ func TestUint32SliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "uint32Slice", v.Type())
 	})
-
 }
 
 func TestStringUint32MapValue(t *testing.T) {
@@ -3845,7 +3833,6 @@ func TestUint64Value(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "uint64", v.Type())
 	})
-
 }
 
 func TestUint64SliceValue_Zero(t *testing.T) {
@@ -3983,7 +3970,6 @@ func TestUint64SliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "uint64Slice", v.Type())
 	})
-
 }
 
 func TestStringUint64MapValue(t *testing.T) {
@@ -4521,7 +4507,6 @@ func TestIntValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "int", v.Type())
 	})
-
 }
 
 func TestIntSliceValue_Zero(t *testing.T) {
@@ -4659,7 +4644,6 @@ func TestIntSliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "intSlice", v.Type())
 	})
-
 }
 
 func TestStringIntMapValue(t *testing.T) {
@@ -5167,7 +5151,6 @@ func TestInt8Value(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "int8", v.Type())
 	})
-
 }
 
 func TestInt8SliceValue_Zero(t *testing.T) {
@@ -5305,7 +5288,6 @@ func TestInt8SliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "int8Slice", v.Type())
 	})
-
 }
 
 func TestStringInt8MapValue(t *testing.T) {
@@ -5813,7 +5795,6 @@ func TestInt16Value(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "int16", v.Type())
 	})
-
 }
 
 func TestInt16SliceValue_Zero(t *testing.T) {
@@ -5951,7 +5932,6 @@ func TestInt16SliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "int16Slice", v.Type())
 	})
-
 }
 
 func TestStringInt16MapValue(t *testing.T) {
@@ -6459,7 +6439,6 @@ func TestInt32Value(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "int32", v.Type())
 	})
-
 }
 
 func TestInt32SliceValue_Zero(t *testing.T) {
@@ -6597,7 +6576,6 @@ func TestInt32SliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "int32Slice", v.Type())
 	})
-
 }
 
 func TestStringInt32MapValue(t *testing.T) {
@@ -7105,7 +7083,6 @@ func TestInt64Value(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "int64", v.Type())
 	})
-
 }
 
 func TestInt64SliceValue_Zero(t *testing.T) {
@@ -7243,7 +7220,6 @@ func TestInt64SliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "int64Slice", v.Type())
 	})
-
 }
 
 func TestStringInt64MapValue(t *testing.T) {
@@ -7731,7 +7707,6 @@ func TestFloat64Value(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "float64", v.Type())
 	})
-
 }
 
 func TestFloat64SliceValue_Zero(t *testing.T) {
@@ -7869,7 +7844,6 @@ func TestFloat64SliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "float64Slice", v.Type())
 	})
-
 }
 
 func TestStringFloat64MapValue(t *testing.T) {
@@ -8357,7 +8331,6 @@ func TestFloat32Value(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "float32", v.Type())
 	})
-
 }
 
 func TestFloat32SliceValue_Zero(t *testing.T) {
@@ -8495,7 +8468,6 @@ func TestFloat32SliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "float32Slice", v.Type())
 	})
-
 }
 
 func TestStringFloat32MapValue(t *testing.T) {
@@ -8973,7 +8945,6 @@ func TestDurationValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "duration", v.Type())
 	})
-
 }
 
 func TestDurationSliceValue_Zero(t *testing.T) {
@@ -9111,7 +9082,6 @@ func TestDurationSliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "durationSlice", v.Type())
 	})
-
 }
 
 func TestStringDurationMapValue(t *testing.T) {
@@ -9589,7 +9559,6 @@ func TestIPValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "ip", v.Type())
 	})
-
 }
 
 func TestIPSliceValue_Zero(t *testing.T) {
@@ -9727,7 +9696,6 @@ func TestIPSliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "ipSlice", v.Type())
 	})
-
 }
 
 func TestStringIPMapValue(t *testing.T) {
@@ -10225,7 +10193,6 @@ func TestHexBytesValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "hexBytes", v.Type())
 	})
-
 }
 
 func TestHexBytesSliceValue_Zero(t *testing.T) {
@@ -10363,7 +10330,6 @@ func TestHexBytesSliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "hexBytesSlice", v.Type())
 	})
-
 }
 
 func TestStringHexBytesMapValue(t *testing.T) {
@@ -10841,7 +10807,6 @@ func TestRegexpValue(t *testing.T) {
 		assert.Equal(t, a, v.Get())
 		assert.Equal(t, "regexp", v.Type())
 	})
-
 }
 
 func TestRegexpSliceValue_Zero(t *testing.T) {
@@ -10979,7 +10944,6 @@ func TestRegexpSliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "regexpSlice", v.Type())
 	})
-
 }
 
 func TestStringRegexpMapValue(t *testing.T) {
@@ -11477,7 +11441,6 @@ func TestTCPAddrValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "tcpAddr", v.Type())
 	})
-
 }
 
 func TestTCPAddrSliceValue_Zero(t *testing.T) {
@@ -11516,7 +11479,6 @@ func TestTCPAddrSliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "tcpAddrSlice", v.Type())
 	})
-
 }
 
 func TestIPNetValue_Zero(t *testing.T) {
@@ -11589,7 +11551,6 @@ func TestIPNetValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "ipNet", v.Type())
 	})
-
 }
 
 func TestIPNetSliceValue_Zero(t *testing.T) {
@@ -11727,7 +11688,6 @@ func TestIPNetSliceValue(t *testing.T) {
 		assert.Equal(t, *a, v.Get())
 		assert.Equal(t, "ipNetSlice", v.Type())
 	})
-
 }
 
 func TestStringIPNetMapValue(t *testing.T) {

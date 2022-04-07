@@ -373,9 +373,8 @@ func TestParseStruct(t *testing.T) {
 			},
 		},
 		{
-			name: "We need pointer to structure",
-			cfg: struct {
-			}{},
+			name:   "We need pointer to structure",
+			cfg:    struct{}{},
 			expErr: errors.New("object must be a pointer to struct or interface"),
 		},
 		{

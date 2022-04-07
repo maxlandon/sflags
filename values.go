@@ -41,7 +41,7 @@ type BoolFlag interface {
 }
 
 // RepeatableFlag is an optional interface for flags that can be repeated.
-// required by kingpin
+// required by kingpin.
 type RepeatableFlag interface {
 	Value
 	IsCumulative() bool
@@ -95,7 +95,7 @@ type HexBytes []byte
 // If you use `struct{count Counter}
 // and parse it with `-count=10 ... -count .. -count`,
 // then final value of `count` will be 12.
-// Implements Value, Getter, BoolFlag, RepeatableFlag interfaces
+// Implements Value, Getter, BoolFlag, RepeatableFlag interfaces.
 type Counter int
 
 var _ RepeatableFlag = (*Counter)(nil)
@@ -126,7 +126,7 @@ func (v Counter) Get() interface{} { return int(v) }
 // IsBoolFlag returns true, because Counter might be used without value.
 func (v Counter) IsBoolFlag() bool { return true }
 
-// String returns string representation of Counter
+// String returns string representation of Counter.
 func (v Counter) String() string { return strconv.Itoa(int(v)) }
 
 // IsCumulative returns true, because Counter might be used multiple times.

@@ -20,10 +20,18 @@ var _ flagSet = (*pflag.FlagSet)(nil)
 func GenerateTo(src []*sflags.Flag, dst flagSet) {
 	for _, srcFlag := range src {
 		flag := dst.VarPF(srcFlag.Value, srcFlag.Name, srcFlag.Short, srcFlag.Usage)
+
+		// Annotations used for things like completions
+		flag.Annotations = map[string][]string{}
+		var annots []string
+
 		if boolFlag, casted := srcFlag.Value.(sflags.BoolFlag); casted && boolFlag.IsBoolFlag() {
 			// pflag uses -1 in this case,
 			// we will use the same behaviour as in flag library
 			flag.NoOptDefVal = "true"
+		} else if srcFlag.Required {
+			// Only non-boolean flags can be required.
+			annots = append(annots, "required")
 		}
 		flag.Hidden = srcFlag.Hidden
 		if srcFlag.Deprecated {
@@ -33,6 +41,8 @@ func GenerateTo(src []*sflags.Flag, dst flagSet) {
 				flag.Deprecated = "Deprecated"
 			}
 		}
+		// Register annotations to be used by clients and completers
+		flag.Annotations["sflags"] = annots
 	}
 }
 

@@ -509,7 +509,7 @@ func fatalIfError(err error) {
 	}
 }
 
-// removeNon removes \nn\n from string
+// removeNon removes \nn\n from string.
 func removeNon(src string) string {
 	return strings.Replace(src, "\\nn\n", "", -1)
 }
@@ -641,7 +641,6 @@ func main() {
 
 		gofmt("values_generated_test.go")
 	}
-
 }
 
 func stringifyKinds(kinds []reflect.Kind) []string {
@@ -662,7 +661,7 @@ func gofmt(path string) {
 	}
 }
 
-// transform s from CamelCase to mixedCase
+// transform s from CamelCase to mixedCase.
 func camelToLower(s string) string {
 	splitted := split(s)
 	splitted[0] = strings.ToLower(splitted[0])

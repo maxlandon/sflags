@@ -51,7 +51,8 @@ func TestParse(t *testing.T) {
 				CounterValue1: 3,
 
 				StringSliceValue1: []string{
-					"one2", "two2", "three", "4"},
+					"one2", "two2", "three", "4",
+				},
 			},
 			args: []string{
 				"--string-value1", "string_value1_value2",

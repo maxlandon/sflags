@@ -59,7 +59,7 @@ func isValidTag(s string) bool {
 	return true
 }
 
-// parseTagIntoMap parses a struct tag `valid:"required~Some error message,length(2|3)"` into map[string]string{"required": "Some error message", "length(2|3)": ""}
+// parseTagIntoMap parses a struct tag `valid:"required~Some error message,length(2|3)"` into map[string]string{"required": "Some error message", "length(2|3)": ""}.
 func parseTagIntoMap(tag string) tagOptionsMap {
 	optionsMap := make(tagOptionsMap)
 	options := strings.SplitN(tag, ",", -1)
@@ -78,7 +78,6 @@ func parseTagIntoMap(tag string) tagOptionsMap {
 }
 
 func validateFunc(val string, options tagOptionsMap) error {
-
 	// for each tag option check the map of validator functions
 	for validator, customErrorMessage := range options {
 		var negate bool
@@ -93,7 +92,6 @@ func validateFunc(val string, options tagOptionsMap) error {
 			ps := value.FindStringSubmatch(validator)
 			if len(ps) > 0 {
 				if validatefunc, ok := govalidator.ParamTagMap[key]; ok {
-
 					if result := validatefunc(val, ps[1:]...); (!result && !negate) || (result && negate) {
 						var err error
 						if !negate {
@@ -102,7 +100,6 @@ func validateFunc(val string, options tagOptionsMap) error {
 							} else {
 								err = fmt.Errorf("`%s` does not validate as %s", val, validator)
 							}
-
 						} else {
 							if customMsgExists {
 								err = fmt.Errorf(customErrorMessage)
@@ -112,7 +109,6 @@ func validateFunc(val string, options tagOptionsMap) error {
 						}
 						return err
 					}
-
 				}
 			}
 		}
@@ -136,7 +132,6 @@ func validateFunc(val string, options tagOptionsMap) error {
 				}
 				return err
 			}
-
 		}
 	}
 	return nil

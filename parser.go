@@ -1,9 +1,12 @@
 package sflags
 
 import (
-	"errors"
+	"fmt"
 	"reflect"
 	"strings"
+	"unicode/utf8"
+
+	"github.com/octago/sflags/internal/tag"
 )
 
 const (
@@ -13,6 +16,8 @@ const (
 	defaultFlagDivider = "-"
 	defaultEnvDivider  = "_"
 	defaultFlatten     = true
+
+	// Others.
 )
 
 // ValidateFunc describes a validation func,
@@ -20,6 +25,12 @@ const (
 // field that's associated with this flag in structure cfg.
 // Should return error if validation fails.
 type ValidateFunc func(val string, field reflect.StructField, cfg interface{}) error
+
+// FlagFunc is a generic function that can be applied to each
+// value that will end up being a sflags *Flag, so that users
+// can perform more arbitrary operations on each, such as checking
+// for completer implementations, etc.
+type FlagFunc func(flag string, tag tag.MultiTag, val reflect.Value) error
 
 type opts struct {
 	descTag     string
@@ -30,12 +41,14 @@ type opts struct {
 	envDivider  string
 	flatten     bool
 	validator   ValidateFunc
+	flagFunc    FlagFunc
 }
 
 func (o opts) apply(optFuncs ...OptFunc) opts {
 	for _, optFunc := range optFuncs {
 		optFunc(&o)
 	}
+
 	return o
 }
 
@@ -64,6 +77,10 @@ func EnvDivider(val string) OptFunc { return func(opt *opts) { opt.envDivider = 
 // Validator sets validator function for flags.
 // Check existed validators in sflags/validator package.
 func Validator(val ValidateFunc) OptFunc { return func(opt *opts) { opt.validator = val } }
+
+// FlagHandler sets the handler function for flags, in order to perform arbitrary
+// operations on the value of the flag identified by the <flag> name parameter of FlagFunc.
+func FlagHandler(val FlagFunc) OptFunc { return func(opt *opts) { opt.flagFunc = val } }
 
 // Flatten set flatten option.
 // Set to false if you don't want anonymous structure fields to be flatten.
@@ -94,8 +111,18 @@ func parseFlagTag(field reflect.StructField, opt opts) *Flag {
 	flag := Flag{}
 	ignoreFlagPrefix := false
 	flag.Name = camelToFlag(field.Name, opt.flagDivider)
-	if flagTags := strings.Split(field.Tag.Get(opt.flagTag), ","); len(flagTags) > 0 {
-		switch fName := flagTags[0]; fName {
+
+	// Get struct tag or die tryin'
+	flagTags, none, err := tag.GetFieldTag(field)
+	if none || err != nil {
+		return nil
+	}
+
+	sflagsTag, _ := flagTags.Get(opt.flagTag)
+
+	if values := strings.Split(sflagsTag, ","); sflagsTag != "" && len(values) > 0 {
+		// Base / legacy sflags tag
+		switch fName := values[0]; fName {
 		case "-":
 			return nil
 		case "":
@@ -112,10 +139,35 @@ func parseFlagTag(field reflect.StructField, opt opts) *Flag {
 				flag.Name = fName
 			}
 		}
-		flag.Hidden = hasOption(flagTags[1:], "hidden")
-		flag.Deprecated = hasOption(flagTags[1:], "deprecated")
-
+		flag.Hidden = hasOption(values[1:], "hidden")
+		flag.Deprecated = hasOption(values[1:], "deprecated")
+	} else if short, found := flagTags.Get("short"); found && short != "" {
+		// Else if we have at least a short name, try get long as well
+		_, err := getShortName(short)
+		flag.Name, _ = flagTags.Get("long")
+		if err == nil {
+			flag.Short = short
+		}
+	} else if long, found := flagTags.Get("long"); found && long != "" {
+		// Or we have only a short tag being specified.
+		flag.Name = long
 	}
+
+	// Descriptions
+	if desc, isSet := flagTags.Get("desc"); isSet && desc != "" {
+		flag.Usage = desc
+	} else if desc, isSet := flagTags.Get("description"); isSet && desc != "" {
+		flag.Usage = desc
+	}
+
+	// Requirements
+	if required, _ := flagTags.Get("required"); !isStringFalsy(required) {
+		flag.Required = true
+	}
+
+	// flag.DefValue = flagTags.GetMany("default")
+	flag.Choices = flagTags.GetMany("choice")
+	flag.OptionalValue = flagTags.GetMany("optional-value")
 
 	if opt.prefix != "" && !ignoreFlagPrefix {
 		flag.Name = opt.prefix + flag.Name
@@ -161,20 +213,20 @@ func parseEnv(flagName string, field reflect.StructField, opt opts) string {
 func ParseStruct(cfg interface{}, optFuncs ...OptFunc) ([]*Flag, error) {
 	// what we want is Ptr to Structure
 	if cfg == nil {
-		return nil, errors.New("object cannot be nil")
+		return nil, ErrObjectIsNil
 	}
 	v := reflect.ValueOf(cfg)
 	if v.Kind() != reflect.Ptr {
-		return nil, errors.New("object must be a pointer to struct or interface")
+		return nil, ErrNotPointerToStruct
 	}
 	if v.IsNil() {
-		return nil, errors.New("object cannot be nil")
+		return nil, ErrObjectIsNil
 	}
 	switch e := v.Elem(); e.Kind() {
 	case reflect.Struct:
 		return parseStruct(e, optFuncs...), nil
 	default:
-		return nil, errors.New("object must be a pointer to struct or interface")
+		return nil, ErrNotPointerToStruct
 	}
 }
 
@@ -248,7 +300,6 @@ fields:
 		}
 
 		flag.EnvName = parseEnv(flag.Name, field, opt)
-		flag.Usage = field.Tag.Get(opt.descTag)
 		prefix := flag.Name + opt.flagDivider
 		if field.Anonymous && opt.flatten {
 			prefix = opt.prefix
@@ -272,11 +323,13 @@ fields:
 			flag.Value = val
 			flag.DefValue = val.String()
 			flags = append(flags, flag)
+
 			continue fields
 		}
 		// field is a structure
 		if len(nestedFlags) > 0 {
 			flags = append(flags, nestedFlags...)
+
 			continue fields
 		}
 
@@ -292,4 +345,27 @@ func anyOf(kinds []reflect.Kind, needle reflect.Kind) bool {
 	}
 
 	return false
+}
+
+func isStringFalsy(s string) bool {
+	return s == "" || s == "false" || s == "no" || s == "0"
+}
+
+func getShortName(name string) (rune, error) {
+	short := rune(0)
+	runeCount := utf8.RuneCountInString(name)
+
+	// Either an invalid option name
+	if runeCount > 1 {
+		msg := fmt.Sprintf("not provided `%s'", name)
+
+		return short, newError(ErrShortNameTooLong, msg)
+	}
+
+	// Or we have to decode and return
+	if runeCount == 1 {
+		short, _ = utf8.DecodeRuneInString(name)
+	}
+
+	return short, nil
 }
