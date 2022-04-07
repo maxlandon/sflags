@@ -16,8 +16,6 @@ const (
 	defaultFlagDivider = "-"
 	defaultEnvDivider  = "_"
 	defaultFlatten     = true
-
-	// Others.
 )
 
 // ValidateFunc describes a validation func,
@@ -107,7 +105,7 @@ func defOpts() opts {
 	}
 }
 
-func parseFlagTag(field reflect.StructField, opt opts) *Flag {
+func parseFlagTag(field reflect.StructField, opt opts) (*Flag, *tag.MultiTag) {
 	flag := Flag{}
 	ignoreFlagPrefix := false
 	flag.Name = camelToFlag(field.Name, opt.flagDivider)
@@ -115,7 +113,7 @@ func parseFlagTag(field reflect.StructField, opt opts) *Flag {
 	// Get struct tag or die tryin'
 	flagTags, none, err := tag.GetFieldTag(field)
 	if none || err != nil {
-		return nil
+		return nil, nil
 	}
 
 	sflagsTag, _ := flagTags.Get(opt.flagTag)
@@ -124,7 +122,7 @@ func parseFlagTag(field reflect.StructField, opt opts) *Flag {
 		// Base / legacy sflags tag
 		switch fName := values[0]; fName {
 		case "-":
-			return nil
+			return nil, &flagTags
 		case "":
 		default:
 			fNameSplitted := strings.Split(fName, " ")
@@ -172,7 +170,7 @@ func parseFlagTag(field reflect.StructField, opt opts) *Flag {
 	if opt.prefix != "" && !ignoreFlagPrefix {
 		flag.Name = opt.prefix + flag.Name
 	}
-	return &flag
+	return &flag, &flagTags
 }
 
 func parseEnv(flagName string, field reflect.StructField, opt opts) string {
@@ -294,7 +292,7 @@ fields:
 			continue fields
 		}
 
-		flag := parseFlagTag(field, opt)
+		flag, tag := parseFlagTag(field, opt)
 		if flag == nil {
 			continue fields
 		}
@@ -324,8 +322,21 @@ fields:
 			flag.DefValue = val.String()
 			flags = append(flags, flag)
 
+			// If the user provided some custom flag
+			// value handlers/scanners, run on it.
+			if opt.flagFunc != nil {
+				var name string
+				if flag.Name != "" {
+					name = flag.Name
+				} else {
+					name = flag.Short
+				}
+				opt.flagFunc(name, *tag, fieldValue)
+			}
+
 			continue fields
 		}
+
 		// field is a structure
 		if len(nestedFlags) > 0 {
 			flags = append(flags, nestedFlags...)
@@ -333,7 +344,9 @@ fields:
 			continue fields
 		}
 
+		continue fields
 	}
+
 	return flags
 }
 

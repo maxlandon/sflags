@@ -50,6 +50,12 @@ const (
 	ShellCompDirectiveDefault CompDirective = 0
 )
 
+var completeTagName = "complete"
+
+const (
+	completeTagMaxParts = 2
+)
+
 func getCompletionAction(name, value string) (action comp.Action) {
 	switch name {
 	case "NoSpace":
@@ -71,6 +77,7 @@ func getCompletionAction(name, value string) (action comp.Action) {
 
 	// Should normally not be used often
 	case "Default":
+		return
 	}
 
 	return
@@ -114,7 +121,7 @@ func typeCompleter(val reflect.Value) comp.CompletionCallback {
 
 // taggedCompletions builds a list of completion actions with struct tag specs.
 func taggedCompletions(tag tag.MultiTag) (cb comp.CompletionCallback, found bool) {
-	compTag := tag.GetMany("complete") // TODO constants
+	compTag := tag.GetMany(completeTagName) // TODO constants
 
 	if len(compTag) == 0 {
 		return nil, false
@@ -135,7 +142,7 @@ func taggedCompletions(tag tag.MultiTag) (cb comp.CompletionCallback, found bool
 			continue
 		}
 
-		items := strings.SplitAfterN(tag, ",", 2)
+		items := strings.SplitAfterN(tag, ",", completeTagMaxParts)
 
 		name, value := strings.TrimSuffix(items[0], ","), ""
 
