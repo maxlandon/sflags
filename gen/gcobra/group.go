@@ -34,10 +34,17 @@ func flagsGroup(cmd *cobra.Command, val reflect.Value, sfield *reflect.StructFie
 
 	// We are either waiting for:
 	// A group of options ("group" is the legacy name)
-	optionsGroup, isSet := mtag.Get("group")
-	if isSet && optionsGroup != "" {
+	var groupName string
+	legacyGroup, legacyIsSet := mtag.Get("group")
+	optionsGroup, optionsIsSet := mtag.Get("options")
+	if legacyIsSet {
+		groupName = legacyGroup
+	} else if optionsIsSet {
+		groupName = optionsGroup
+	}
+	if legacyIsSet && legacyGroup != "" {
 		cmd.AddGroup(&cobra.Group{
-			Group: optionsGroup,
+			Group: groupName,
 			Title: description,
 		})
 

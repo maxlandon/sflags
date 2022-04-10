@@ -1,6 +1,7 @@
 package gcobra
 
 import (
+	"os"
 	"reflect"
 
 	"github.com/spf13/cobra"
@@ -10,18 +11,18 @@ import (
 	"github.com/octago/sflags/internal/tag"
 )
 
-// Command generates a new cobra command from a struct, recursively
-// scanning for options, subcommands, groups of either.
-func Command(name, short, long string, data sflags.Commander) *cobra.Command {
+// Parse returns a root cobra Command to be used directly as an entry-point.
+// The data interface parameter can be nil, or arbitrarily:
+// - A simple group of options to bind at the local, root level
+// - A struct containing substructs for postional parameters, and other with options.
+func Parse(data interface{}) *cobra.Command {
+	// The command is empty, so that the returned command can be
+	// directly ran as a root application command, with calls like
+	// cmd.Execute(), or cobra.CheckErr(cmd.Execute())
 	cmd := &cobra.Command{
-		Use:         name,
-		Short:       short,
-		Long:        long,
+		Use:         os.Args[0], // By default, the command is the name of the binary. TODO: change this
 		Annotations: map[string]string{},
 	}
-
-	// Bind the various pre/run/post implementations
-	setRuns(cmd, data)
 
 	// A command always accepts embedded
 	// subcommand struct fields, so scan them.
@@ -36,6 +37,13 @@ func Command(name, short, long string, data sflags.Commander) *cobra.Command {
 	// NOTE: should handle remote exec here
 
 	// Sane defaults for working both in CLI and in closed-loop applications.
+	if !cmd.HasSubCommands() {
+		cmd.RunE = func(cmd *cobra.Command, args []string) error {
+			return nil
+		}
+	} else if _, isCmd, impl := sflags.IsCommand(reflect.ValueOf(data)); isCmd {
+		setRuns(cmd, impl)
+	}
 
 	return cmd
 }
@@ -71,12 +79,17 @@ func scanCommand(cmd *cobra.Command, group *cobra.Group) scan.Handler {
 
 // command finds if a field is marked as a subcommand, and if yes, scans it.
 func command(cmd *cobra.Command, grp *cobra.Group, tag tag.MultiTag, val reflect.Value) (bool, error) {
-	// Parse the command name on struct tag, and check the field
-	// implements at least the Commander interface
-	isCmd, name, impl := sflags.IsCommand(tag, val)
-	if !isCmd && len(name) != 0 && impl == nil {
+	// Parse the command name on struct tag...
+	name, _ := tag.Get("command")
+	if len(name) == 0 {
+		return false, nil
+	}
+
+	// ... and check the field implements at least the Commander interface
+	val, implements, cmdType := sflags.IsCommand(val)
+	if !implements && len(name) != 0 && cmdType == nil {
 		return false, ErrNotCommander
-	} else if !isCmd && len(name) == 0 {
+	} else if !implements && len(name) == 0 {
 		return false, nil // Skip to next field
 	}
 
@@ -85,15 +98,12 @@ func command(cmd *cobra.Command, grp *cobra.Group, tag tag.MultiTag, val reflect
 	// we can have a more granular context.
 	subc := newCommand(name, tag, grp)
 
-	// A command always accepts embedded subcommand
-	// struct fields, so scan them.
-	scanner := scanCommand(subc, grp)
-
 	// Bind the various pre/run/post implementations of our command.
-	setRuns(subc, impl)
+	setRuns(subc, cmdType)
 
 	// Scan the struct recursively, for both arg/option groups and subcommands
-	if err := scan.Type(val.Addr().Interface(), scanner); err != nil {
+	scanner := scanCommand(subc, grp)
+	if err := scan.Type(val.Interface(), scanner); err != nil {
 		return true, err
 	}
 
@@ -154,6 +164,7 @@ func setRuns(cmd *cobra.Command, impl sflags.Commander) {
 	// Main run
 	cmd.RunE = func(c *cobra.Command, args []string) error {
 		retargs := getRemainingArgs(c)
+		cmd.SetArgs(retargs)
 
 		return impl.Execute(retargs)
 	}

@@ -12,6 +12,22 @@ import (
 	"github.com/octago/sflags/internal/tag"
 )
 
+func Generate(cmd *cobra.Command, data interface{}, comps *comp.Carapace) (*comp.Carapace, error) {
+	if comps == nil {
+		comps = comp.Gen(cmd)
+	}
+
+	// A command always accepts embedded subcommand struct fields, so scan them.
+	compScanner := scanCompletions(cmd, comps)
+
+	// Scan the struct recursively, for both arg/option groups and subcommands
+	if err := scan.Type(data, compScanner); err != nil {
+		return comps, err
+	}
+
+	return comps, nil
+}
+
 // Gen uses a carapace completion builder to register various completions
 // to its underlying cobra command, parsing again the native struct for type
 // and struct tags' information.
@@ -63,13 +79,18 @@ func scanCompletions(cmd *cobra.Command, comps *comp.Carapace) scan.Handler {
 
 // command finds if a field is marked as a command, and if yes, scans it.
 func command(cmd *cobra.Command, tag tag.MultiTag, val reflect.Value) (bool, error) {
-	// Parse the command name on struct tag, and check the field
-	// implements at least the Commander interface
-	isCmd, name, impl := sflags.IsCommand(tag, val)
-	if !isCmd && len(name) != 0 && impl == nil {
+	// Parse the command name on struct tag...
+	name, _ := tag.Get("command")
+	if len(name) == 0 {
 		return false, nil
-	} else if !isCmd && len(name) == 0 {
+	}
+
+	// ... and check the field implements at least the Commander interface
+	val, implements, commander := sflags.IsCommand(val)
+	if !implements && len(name) != 0 && commander == nil {
 		return false, nil
+	} else if !implements && len(name) == 0 {
+		return false, nil // Skip to next field
 	}
 
 	var subc *cobra.Command
@@ -88,7 +109,7 @@ func command(cmd *cobra.Command, tag tag.MultiTag, val reflect.Value) (bool, err
 	// Simply generate a new carapace around this command,
 	// so that we can register different positional arguments
 	// without overwriting those of our root command.
-	if _, err := Gen(subc, impl, nil); err != nil {
+	if _, err := Gen(subc, commander, nil); err != nil {
 		return true, err
 	}
 
