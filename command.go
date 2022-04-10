@@ -2,8 +2,6 @@ package sflags
 
 import (
 	"reflect"
-
-	"github.com/octago/sflags/internal/tag"
 )
 
 // Commander is the simplest and smallest interface that a type must
@@ -17,13 +15,9 @@ type Commander interface {
 	Execute(args []string) (err error)
 }
 
-// checks both tags and implementations.
-func IsCommand(mtag tag.MultiTag, val reflect.Value) (bool, string, Commander) {
-	name, _ := mtag.Get("command")
-	if len(name) == 0 {
-		return false, "", nil
-	}
-
+// IsCommand checks both tags and implementations on a pointer to a struct,
+// initializing the value itself if it's nil (useful for callers).
+func IsCommand(val reflect.Value) (reflect.Value, bool, Commander) {
 	// Initialize if needed
 	var ptrval reflect.Value
 
@@ -40,8 +34,8 @@ func IsCommand(mtag tag.MultiTag, val reflect.Value) (bool, string, Commander) {
 	// Assert implementation
 	cmd, implements := ptrval.Interface().(Commander)
 	if !implements {
-		return false, "", nil
+		return ptrval, false, nil
 	}
 
-	return true, name, cmd
+	return ptrval, true, cmd
 }

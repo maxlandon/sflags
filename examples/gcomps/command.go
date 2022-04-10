@@ -42,36 +42,36 @@ type Command struct {
 // Execute implements a local execution, satisfying the simplest reflags interface,
 // `Commander`. This makes it a valid command, for which any reflags client (CLI or
 // closed-app) will provide default use, help, usage and completion functionality.
-func (c *Command) Execute(args []string) (err error) {
-	// Remove this line, and add your command implementation.
-	err = errors.New("ListContent client command not implemented")
-
-	// Remainin fixed/unfixed
-	// fmt.Println("Vuln: " + fmt.Sprintf("%v", c.CompletedArguments.Vuln))
-	fmt.Println("Other: " + fmt.Sprintf("%v", c.CompletedArguments.Other))
-	fmt.Println("Target: " + fmt.Sprintf("%v", c.CompletedArguments.Target))
-
-	// multiple min-max
-	// fmt.Println("Target: " + fmt.Sprintf("%v", c.CompletedArguments.Other))
-	// fmt.Println("Basics: " + fmt.Sprintf("%v", c.CompletedArguments.Basics))
-	// fmt.Println("Vuln: " + fmt.Sprintf("%v", c.CompletedArguments.Vuln))
-
-	// other
-	// fmt.Println("Basics: " + fmt.Sprintf("%v", c.CompletedArguments.Basics))
-	// fmt.Println("Adv: " + fmt.Sprintf("%v", c.CompletedArguments.Adv))
-	// fmt.Println("Target: " + fmt.Sprintf("%v", c.CompletedArguments.Target))
-	// fmt.Println("Other: " + fmt.Sprintf("%v", c.CompletedArguments.Other))
-
-	// Options
-	fmt.Println(c.Path)
-	fmt.Println(c.Elems)
-	// fmt.Println(c.CompletedOptions.Files)
-	// fmt.Println(c.CompletedOptions.Endpoints)
-
-	fmt.Println("Remaining args: " + fmt.Sprintf("%v", args))
-
-	return
-}
+// func (c *Command) Execute(args []string) (err error) {
+//         // Remove this line, and add your command implementation.
+//         err = errors.New("ListContent client command not implemented")
+//
+//         // Remainin fixed/unfixed
+//         // fmt.Println("Vuln: " + fmt.Sprintf("%v", c.CompletedArguments.Vuln))
+//         fmt.Println("Other: " + fmt.Sprintf("%v", c.CompletedArguments.Other))
+//         fmt.Println("Target: " + fmt.Sprintf("%v", c.CompletedArguments.Target))
+//
+//         // multiple min-max
+//         // fmt.Println("Target: " + fmt.Sprintf("%v", c.CompletedArguments.Other))
+//         // fmt.Println("Basics: " + fmt.Sprintf("%v", c.CompletedArguments.Basics))
+//         // fmt.Println("Vuln: " + fmt.Sprintf("%v", c.CompletedArguments.Vuln))
+//
+//         // other
+//         // fmt.Println("Basics: " + fmt.Sprintf("%v", c.CompletedArguments.Basics))
+//         // fmt.Println("Adv: " + fmt.Sprintf("%v", c.CompletedArguments.Adv))
+//         // fmt.Println("Target: " + fmt.Sprintf("%v", c.CompletedArguments.Target))
+//         // fmt.Println("Other: " + fmt.Sprintf("%v", c.CompletedArguments.Other))
+//
+//         // Options
+//         fmt.Println(c.Path)
+//         fmt.Println(c.Elems)
+//         // fmt.Println(c.CompletedOptions.Files)
+//         // fmt.Println(c.CompletedOptions.Endpoints)
+//
+//         fmt.Println("Remaining args: " + fmt.Sprintf("%v", args))
+//
+//         return
+// }
 
 type Getter struct {
 	CompletedArguments `args:"yes" required:"yes"`
