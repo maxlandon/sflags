@@ -2,6 +2,7 @@ package gcobra
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -423,6 +424,13 @@ func newCommandWithArgs(data interface{}, args []string) *cobra.Command {
 	// We don't want the errors to be printed to stdout.
 	cmd.SilenceErrors = true
 	cmd.SilenceUsage = true
+
+	// by default our root command has name os.Args[1],
+	// which makes it fail, so only remove it when we
+	// find in the args sequence
+	if strings.Contains(cmd.Name(), "cobra.test") {
+		cmd.Use = ""
+	}
 
 	return cmd
 }
