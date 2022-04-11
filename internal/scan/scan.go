@@ -84,24 +84,15 @@ func scanField(val reflect.Value, field reflect.StructField, scan Handler) error
 		return nil
 	}
 
-	// fld := val.Field(fCount)
 	kind := field.Type.Kind()
+	structPointer := (kind == reflect.Ptr && field.Type.Elem().Kind() == reflect.Struct)
 
-	// Either the embedded fied is a struct value
-	if kind == reflect.Struct {
+	// We are just interested in the actual type of the field to
+	// be a struct, regardless of it's pointer to one or not.
+	// Also, we never initialize nil pointers by default, since
+	// we want to preserve the given struct as much as possible.
+	if kind == reflect.Struct || structPointer {
 		return scanStruct(val, &field, scan)
-		// if err := scanStruct(val, &field, scan); err != nil {
-		//         return err
-		// }
-	}
-
-	// Or the embedded field is a pointer to a struct, ensure there's no nil
-	if kind == reflect.Ptr && field.Type.Elem().Kind() == reflect.Struct {
-		if val.IsNil() {
-			val = reflect.New(val.Type().Elem())
-		}
-
-		return scanStruct(reflect.Indirect(val), &field, scan)
 	}
 
 	// By default, always try to scan the field as an option.

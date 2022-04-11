@@ -43,6 +43,11 @@ func GetFieldTag(field reflect.StructField) (MultiTag, bool, error) {
 		return MultiTag{}, true, nil
 	}
 
+	// If the field tag is empty, there is no tag
+	if field.Tag == "" {
+		return MultiTag{}, true, nil
+	}
+
 	// Else find the tag and try parsing
 	mtag := NewMultiTag(string(field.Tag))
 

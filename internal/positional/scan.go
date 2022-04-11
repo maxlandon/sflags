@@ -82,7 +82,7 @@ func ScanArgs(val reflect.Value, stag tag.MultiTag) (args *Args, err error) {
 func parsePositionalTag(field reflect.StructField) (tag.MultiTag, string, error) {
 	tag, none, err := tag.GetFieldTag(field)
 	if none || err != nil {
-		return tag, "", err
+		return tag, field.Name, err
 	}
 
 	name, _ := tag.Get("positional-arg-name")
