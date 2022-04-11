@@ -21,12 +21,9 @@ func IsCommand(val reflect.Value) (reflect.Value, bool, Commander) {
 	// Initialize if needed
 	var ptrval reflect.Value
 
+	// We just want to get interface, even if nil
 	if val.Kind() == reflect.Ptr {
 		ptrval = val
-
-		if ptrval.IsNil() {
-			ptrval.Set(reflect.New(ptrval.Type().Elem()))
-		}
 	} else {
 		ptrval = val.Addr()
 	}
@@ -35,6 +32,11 @@ func IsCommand(val reflect.Value) (reflect.Value, bool, Commander) {
 	cmd, implements := ptrval.Interface().(Commander)
 	if !implements {
 		return ptrval, false, nil
+	}
+
+	// Once we're sure it's a command, initialize the field if needed.
+	if ptrval.IsNil() {
+		ptrval.Set(reflect.New(ptrval.Type().Elem()))
 	}
 
 	return ptrval, true, cmd

@@ -20,6 +20,43 @@ import (
 //
 
 //
+// Command structs -------------------------------------------------------------------- //
+//
+
+// root - The root command is used either for programs being commands
+// themselves, or as a root command for command trees. The command
+// implements sflags.Commander anyway, since we can make use of it
+// or not at will.
+type root struct {
+	// Fist examples
+	V bool `short:"v"`
+
+	// Subcommands
+	C1 testCommand `command:"c1"`
+	C2 testCommand `command:"c2"`
+}
+
+// Execute - The root command implementation.
+func (*root) Execute(args []string) (err error) {
+	return
+}
+
+// command - Generic command that is used as child command in command-tree programs.
+type testCommand struct {
+	G bool `short:"g"`
+
+	// Persistent flags
+	Opts struct {
+		P bool `short:"p"`
+	} `options:"persistent options" persistent:"true"`
+}
+
+// Execute - Generic command that is used as child command to programs.
+func (t *testCommand) Execute(args []string) (err error) {
+	return nil
+}
+
+//
 // Command Flags --------------------------------------------------------------- //
 //
 
@@ -275,41 +312,4 @@ func TestSubcommandsOptional(t *testing.T) {
 // pass after non-option, will correctly behave when being submitted a line.
 func TestCommandPassAfterNonOptionWithPositional(t *testing.T) {
 	t.Log("TODO: TestCommandPassAfterNonOptionWithPositional not written")
-}
-
-//
-// Command structs -------------------------------------------------------------------- //
-//
-
-// root - The root command is used either for programs being commands
-// themselves, or as a root command for command trees. The command
-// implements sflags.Commander anyway, since we can make use of it
-// or not at will.
-type root struct {
-	// Fist examples
-	V bool `short:"v"`
-
-	// Subcommands
-	C1 testCommand `command:"c1"`
-	C2 testCommand `command:"c2"`
-}
-
-// Execute - The root command implementation.
-func (*root) Execute(args []string) (err error) {
-	return
-}
-
-// command - Generic command that is used as child command in command-tree programs.
-type testCommand struct {
-	G bool `short:"g"`
-
-	// Persistent flags
-	Opts struct {
-		P bool `short:"p"`
-	} `options:"persistent options" persistent:"true"`
-}
-
-// Execute - Generic command that is used as child command to programs.
-func (t *testCommand) Execute(args []string) (err error) {
-	return nil
 }

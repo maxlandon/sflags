@@ -1,6 +1,7 @@
 package gcobra
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 
@@ -31,6 +32,8 @@ func Parse(data interface{}) *cobra.Command {
 	// Scan the struct recursively, for both
 	// arg/option groups and subcommands
 	if err := scan.Type(data, scanner); err != nil {
+		fmt.Println(err)
+		fmt.Println("nil")
 		return nil
 	}
 
@@ -55,9 +58,9 @@ func Parse(data interface{}) *cobra.Command {
 // given struct field at a time, checking for arguments, subcommands and option groups.
 func scanCommand(cmd *cobra.Command, group *cobra.Group) scan.Handler {
 	handler := func(val reflect.Value, sfield *reflect.StructField) (bool, error) {
-		// Parse the tag or die tryin
-		mtag, _, err := tag.GetFieldTag(*sfield)
-		if err != nil {
+		// Parse the tag or die tryin. We should find one, or we're not interested.
+		mtag, none, err := tag.GetFieldTag(*sfield)
+		if none || err != nil {
 			return true, err
 		}
 

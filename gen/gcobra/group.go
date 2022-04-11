@@ -35,35 +35,42 @@ func flagsGroup(cmd *cobra.Command, val reflect.Value, sfield *reflect.StructFie
 	mtag, skip, err := tag.GetFieldTag(*sfield)
 	if err != nil {
 		return true, err
-	}
-	if skip {
+	} else if skip {
 		return false, nil
 	}
 
+	var groupName string
+
+	legacyGroup, legacyIsSet := mtag.Get("group")
+	optionsGroup, optionsIsSet := mtag.Get("options")
+	commandGroup, commandsIsSet := mtag.Get("commands")
 	description, _ := mtag.Get("description")
 
+	if !legacyIsSet && !optionsIsSet && !commandsIsSet {
+		return false, nil
+	}
+
+	// If we have to work on this struct, check pointers n stuff
 	var ptrval reflect.Value
 
 	if val.Kind() == reflect.Ptr {
 		ptrval = val
-
 		if ptrval.IsNil() {
-			ptrval.Set(reflect.New(ptrval.Type()))
+			ptrval.Set(reflect.New(ptrval.Type().Elem()))
 		}
 	} else {
 		ptrval = val.Addr()
 	}
 
-	// We are either waiting for:
-	// A group of options ("group" is the legacy name)
-	var groupName string
-	legacyGroup, legacyIsSet := mtag.Get("group")
-	optionsGroup, optionsIsSet := mtag.Get("options")
+	// then settle on the name of the group, and the type of
+	// scan we must launch on it thereof.
 	if legacyIsSet {
 		groupName = legacyGroup
 	} else if optionsIsSet {
 		groupName = optionsGroup
 	}
+
+	// A group of options ("group" is the legacy name)
 	if legacyIsSet && legacyGroup != "" {
 		cmd.AddGroup(&cobra.Group{
 			Group: groupName,
@@ -76,8 +83,7 @@ func flagsGroup(cmd *cobra.Command, val reflect.Value, sfield *reflect.StructFie
 	}
 
 	// Or a group of commands and options
-	commandGroup, isSet := mtag.Get("commands")
-	if isSet {
+	if commandsIsSet {
 		var group *cobra.Group
 		if !isStringFalsy(commandGroup) {
 			group = &cobra.Group{
