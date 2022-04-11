@@ -3,7 +3,6 @@ package sflags
 import (
 	"fmt"
 	"reflect"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/octago/sflags/internal/tag"
@@ -105,107 +104,6 @@ func defOpts() opts {
 	}
 }
 
-func parseFlagTag(field reflect.StructField, opt opts) (*Flag, *tag.MultiTag) {
-	flag := Flag{}
-	ignoreFlagPrefix := false
-	flag.Name = camelToFlag(field.Name, opt.flagDivider)
-
-	// Get struct tag or die tryin'
-	flagTags, none, err := tag.GetFieldTag(field)
-	if none || err != nil {
-		return nil, nil
-	}
-
-	sflagsTag, _ := flagTags.Get(opt.flagTag)
-
-	if values := strings.Split(sflagsTag, ","); sflagsTag != "" && len(values) > 0 {
-		// Base / legacy sflags tag
-		switch fName := values[0]; fName {
-		case "-":
-			return nil, &flagTags
-		case "":
-		default:
-			fNameSplitted := strings.Split(fName, " ")
-			if len(fNameSplitted) > 1 {
-				fName = fNameSplitted[0]
-				flag.Short = fNameSplitted[1]
-			}
-			if strings.HasPrefix(fName, "~") {
-				flag.Name = fName[1:]
-				ignoreFlagPrefix = true
-			} else {
-				flag.Name = fName
-			}
-		}
-		flag.Hidden = hasOption(values[1:], "hidden")
-		flag.Deprecated = hasOption(values[1:], "deprecated")
-	} else if short, found := flagTags.Get("short"); found && short != "" {
-		// Else if we have at least a short name, try get long as well
-		_, err := getShortName(short)
-		flag.Name, _ = flagTags.Get("long")
-		if err == nil {
-			flag.Short = short
-		}
-	} else if long, found := flagTags.Get("long"); found && long != "" {
-		// Or we have only a short tag being specified.
-		flag.Name = long
-	}
-
-	// Descriptions
-	if desc, isSet := flagTags.Get("desc"); isSet && desc != "" {
-		flag.Usage = desc
-	} else if desc, isSet := flagTags.Get("description"); isSet && desc != "" {
-		flag.Usage = desc
-	}
-
-	// Requirements
-	if required, _ := flagTags.Get("required"); !isStringFalsy(required) {
-		flag.Required = true
-	}
-
-	// flag.DefValue = flagTags.GetMany("default")
-	flag.Choices = flagTags.GetMany("choice")
-	flag.OptionalValue = flagTags.GetMany("optional-value")
-
-	if opt.prefix != "" && !ignoreFlagPrefix {
-		flag.Name = opt.prefix + flag.Name
-	}
-	return &flag, &flagTags
-}
-
-func parseEnv(flagName string, field reflect.StructField, opt opts) string {
-	ignoreEnvPrefix := false
-	envVar := flagToEnv(flagName, opt.flagDivider, opt.envDivider)
-	if envTags := strings.Split(field.Tag.Get(defaultEnvTag), ","); len(envTags) > 0 {
-		switch envName := envTags[0]; envName {
-		case "-":
-			// if tag is `env:"-"` then won't fill flag from environment
-			envVar = ""
-		case "":
-			// if tag is `env:""` then env var will be taken from flag name
-		default:
-			// if tag is `env:"NAME"` then env var is envPrefix_flagPrefix_NAME
-			// if tag is `env:"~NAME"` then env var is NAME
-			if strings.HasPrefix(envName, "~") {
-				envVar = envName[1:]
-				ignoreEnvPrefix = true
-			} else {
-				envVar = envName
-				if opt.prefix != "" {
-					envVar = flagToEnv(
-						opt.prefix,
-						opt.flagDivider,
-						opt.envDivider) + envVar
-				}
-			}
-		}
-	}
-	if envVar != "" && opt.envPrefix != "" && !ignoreEnvPrefix {
-		envVar = opt.envPrefix + envVar
-	}
-	return envVar
-}
-
 // ParseStruct parses structure and returns list of flags based on this structure.
 // This list of flags can be used by generators for flag, kingpin, cobra, pflag, urfave/cli.
 func ParseStruct(cfg interface{}, optFuncs ...OptFunc) ([]*Flag, error) {
@@ -226,6 +124,71 @@ func ParseStruct(cfg interface{}, optFuncs ...OptFunc) ([]*Flag, error) {
 	default:
 		return nil, ErrNotPointerToStruct
 	}
+}
+
+// ParseField parses a single struct field as a list (often only made of only one) flags.
+// This function can be used when you want to scan only some fields for which you want a flag.
+func ParseField(value reflect.Value, field reflect.StructField, optFuncs ...OptFunc) (flags []*Flag, found bool) {
+	opt := defOpts().apply(optFuncs...) // TODO move from here ?
+
+	// skip unexported and non anonymous fields
+	if field.PkgPath != "" && !field.Anonymous {
+		return nil, false
+	}
+
+	// We should have a flag and a tag, legacy or not, and with valid values.
+	flag, tag := parseFlagTag(field, opt)
+	if flag == nil {
+		return nil, false
+	}
+
+	flag.EnvName = parseEnvTag(flag.Name, field, opt)
+	prefix := flag.Name + opt.flagDivider
+	if field.Anonymous && opt.flatten {
+		prefix = opt.prefix
+	}
+
+	// We might have to scan for an arbitrarily nested structure of flags
+	nestedFlags, val := parseVal(value,
+		copyOpts(opt),
+		Prefix(prefix),
+	)
+
+	// field contains a simple value.
+	if val != nil {
+		if opt.validator != nil {
+			val = &validateValue{
+				Value: val,
+				validateFunc: func(val string) error {
+					return opt.validator(val, field, value.Interface())
+				},
+			}
+		}
+		flag.Value = val
+		flag.DefValue = val.String()
+		flags = append(flags, flag)
+
+		// If the user provided some custom flag
+		// value handlers/scanners, run on it.
+		if opt.flagFunc != nil {
+			var name string
+			if flag.Name != "" {
+				name = flag.Name
+			} else {
+				name = flag.Short
+			}
+			opt.flagFunc(name, *tag, value)
+		}
+
+		return flags, true
+	}
+
+	// field is a structure
+	if len(nestedFlags) > 0 {
+		flags = append(flags, nestedFlags...)
+	}
+
+	return flags, true
 }
 
 func parseVal(value reflect.Value, optFuncs ...OptFunc) ([]*Flag, Value) {
@@ -278,7 +241,10 @@ func parseVal(value reflect.Value, optFuncs ...OptFunc) ([]*Flag, Value) {
 }
 
 func parseStruct(value reflect.Value, optFuncs ...OptFunc) []*Flag {
-	opt := defOpts().apply(optFuncs...)
+	// TODO: this call is now made for every field in ParseField,
+	// so that external callers don't have to access opts, only OptFuncs.
+	// Maybe change this, quite inefficient.
+	// opt := defOpts().apply(optFuncs...)
 
 	flags := []*Flag{}
 
@@ -292,57 +258,14 @@ fields:
 			continue fields
 		}
 
-		flag, tag := parseFlagTag(field, opt)
-		if flag == nil {
+		// Scan the field, potentially a structure.
+		fieldFlags, found := ParseField(fieldValue, field, optFuncs...)
+		if !found || len(fieldFlags) == 0 {
 			continue fields
 		}
 
-		flag.EnvName = parseEnv(flag.Name, field, opt)
-		prefix := flag.Name + opt.flagDivider
-		if field.Anonymous && opt.flatten {
-			prefix = opt.prefix
-		}
-
-		nestedFlags, val := parseVal(fieldValue,
-			copyOpts(opt),
-			Prefix(prefix),
-		)
-
-		// field contains a simple value.
-		if val != nil {
-			if opt.validator != nil {
-				val = &validateValue{
-					Value: val,
-					validateFunc: func(val string) error {
-						return opt.validator(val, field, value.Interface())
-					},
-				}
-			}
-			flag.Value = val
-			flag.DefValue = val.String()
-			flags = append(flags, flag)
-
-			// If the user provided some custom flag
-			// value handlers/scanners, run on it.
-			if opt.flagFunc != nil {
-				var name string
-				if flag.Name != "" {
-					name = flag.Name
-				} else {
-					name = flag.Short
-				}
-				opt.flagFunc(name, *tag, fieldValue)
-			}
-
-			continue fields
-		}
-
-		// field is a structure
-		if len(nestedFlags) > 0 {
-			flags = append(flags, nestedFlags...)
-
-			continue fields
-		}
+		// And append the flag(s) if we have found some.
+		flags = append(flags, fieldFlags...)
 
 		continue fields
 	}
