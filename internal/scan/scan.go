@@ -60,10 +60,11 @@ func scanStruct(val reflect.Value, sfield *reflect.StructField, scan Handler) er
 	// But most of the time we end up here, and look each field again.
 	for fieldCount := 0; fieldCount < stype.NumField(); fieldCount++ {
 		field := stype.Field(fieldCount)
+		fieldValue := val.Field(fieldCount)
 
 		// Scan the field for either a subgroup (if the field is a struct)
 		// or for an option. Any error cancels the scan and is immediately returned.
-		if err := scanField(val, fieldCount, field, scan); err != nil {
+		if err := scanField(fieldValue, field, scan); err != nil {
 			return err
 		}
 	}
@@ -73,8 +74,8 @@ func scanStruct(val reflect.Value, sfield *reflect.StructField, scan Handler) er
 
 // scanField attempts to grab a tag on a struct field, and depending on the field's type,
 // either scans recursively if the field is an embedded struct/pointer, or attempts to scan
-// the field as an option of the group.
-func scanField(val reflect.Value, fCount int, field reflect.StructField, scan Handler) error {
+// the field as an option of the group. TODO: simplify.
+func scanField(val reflect.Value, field reflect.StructField, scan Handler) error {
 	// Get the field tag and return/continue if failed/needed
 	_, skip, err := tag.GetFieldTag(field)
 	if err != nil {
@@ -83,27 +84,31 @@ func scanField(val reflect.Value, fCount int, field reflect.StructField, scan Ha
 		return nil
 	}
 
-	fld := val.Field(fCount)
+	// fld := val.Field(fCount)
 	kind := field.Type.Kind()
 
 	// Either the embedded fied is a struct value
-	if field.Type.Kind() == reflect.Struct {
-		if err := scanStruct(fld, &field, scan); err != nil {
-			return err
-		}
+	if kind == reflect.Struct {
+		return scanStruct(val, &field, scan)
+		// if err := scanStruct(val, &field, scan); err != nil {
+		//         return err
+		// }
 	}
 
 	// Or the embedded field is a pointer to a struct, ensure there's no nil
 	if kind == reflect.Ptr && field.Type.Elem().Kind() == reflect.Struct {
-		if fld.IsNil() {
-			fld = reflect.New(fld.Type().Elem())
+		if val.IsNil() {
+			val = reflect.New(val.Type().Elem())
 		}
 
-		if err := scanStruct(reflect.Indirect(fld), &field, scan); err != nil {
-			return err
-		}
+		return scanStruct(reflect.Indirect(val), &field, scan)
 	}
 
-	// We're done with this field regardless of what we actually did with it.
+	// By default, always try to scan the field as an option.
+	// If an error is thrown in the process, immediately return it.
+	if _, err := scan(val, &field); err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -37,6 +37,9 @@ func Parse(data interface{}) *cobra.Command {
 	// NOTE: should handle remote exec here
 
 	// Sane defaults for working both in CLI and in closed-loop applications.
+	cmd.TraverseChildren = true
+
+	// Subcommands optional or not
 	if !cmd.HasSubCommands() {
 		cmd.RunE = func(cmd *cobra.Command, args []string) error {
 			return nil
@@ -70,8 +73,13 @@ func scanCommand(cmd *cobra.Command, group *cobra.Group) scan.Handler {
 			return found, err
 		}
 
-		// Else, try scanning the field as a group of options
-		return flagsGroup(cmd, val, sfield)
+		// Else, if the field is a struct group of options
+		if found, err := flagsGroup(cmd, val, sfield); found || err != nil {
+			return found, err
+		}
+
+		// Else, try scanning the field as a simple option flag
+		return flagScan(cmd)(val, sfield)
 	}
 
 	return handler

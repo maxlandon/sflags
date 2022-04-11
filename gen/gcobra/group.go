@@ -11,11 +11,33 @@ import (
 	"github.com/octago/sflags/internal/tag"
 )
 
+// flagScan builds a small struct field handler so that we can scan
+// it as an option and add it to our current command flags.
+func flagScan(cmd *cobra.Command) scan.Handler {
+	flagScanner := func(val reflect.Value, sfield *reflect.StructField) (bool, error) {
+		// Parse a single field, returning one or more generic Flags
+		flags, found := sflags.ParseField(val, *sfield)
+		if !found {
+			return false, nil
+		}
+
+		// Put these flags into the command's flagset.
+		gpflag.GenerateTo(flags, cmd.Flags())
+
+		return true, nil
+	}
+
+	return flagScanner
+}
+
 // flagsGroup finds if a field is marked as a subgroup of options, and if yes, scans it recursively.
 func flagsGroup(cmd *cobra.Command, val reflect.Value, sfield *reflect.StructField) (bool, error) {
-	mtag, none, err := tag.GetFieldTag(*sfield)
-	if none || err != nil {
+	mtag, skip, err := tag.GetFieldTag(*sfield)
+	if err != nil {
 		return true, err
+	}
+	if skip {
+		return false, nil
 	}
 
 	description, _ := mtag.Get("description")
@@ -72,7 +94,8 @@ func flagsGroup(cmd *cobra.Command, val reflect.Value, sfield *reflect.StructFie
 		return true, err
 	}
 
-	return true, nil
+	// If we are here, we didn't find a command or a group.
+	return false, nil
 }
 
 // addFlagSet scans a struct (potentially nested) for flag sets to bind to the command.
