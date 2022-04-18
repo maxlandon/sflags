@@ -1,7 +1,6 @@
 package gcobra
 
 import (
-	"fmt"
 	"os"
 	"reflect"
 
@@ -32,8 +31,6 @@ func Parse(data interface{}) *cobra.Command {
 	// Scan the struct recursively, for both
 	// arg/option groups and subcommands
 	if err := scan.Type(data, scanner); err != nil {
-		fmt.Println(err)
-		fmt.Println("nil")
 		return nil
 	}
 
@@ -43,7 +40,7 @@ func Parse(data interface{}) *cobra.Command {
 	cmd.TraverseChildren = true
 
 	// Subcommands optional or not
-	if !cmd.HasSubCommands() {
+	if cmd.HasSubCommands() {
 		cmd.RunE = func(cmd *cobra.Command, args []string) error {
 			return nil
 		}

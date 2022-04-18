@@ -38,6 +38,8 @@ func NewMultiTag(v string) MultiTag {
 // GetFieldTag directly reads, creates and parses a struct field and
 // returns either a working multiTag, or an error if parsing failed.
 func GetFieldTag(field reflect.StructField) (MultiTag, bool, error) {
+	var err error
+
 	// PkgName is set only for non-exported fields, which we ignore
 	if field.PkgPath != "" && !field.Anonymous {
 		return MultiTag{}, true, nil
@@ -51,7 +53,8 @@ func GetFieldTag(field reflect.StructField) (MultiTag, bool, error) {
 	// Else find the tag and try parsing
 	mtag := NewMultiTag(string(field.Tag))
 
-	if err := mtag.Parse(); err != nil {
+	// 1 - with our own code, for multiple tags.
+	if err = mtag.Parse(); err != nil {
 		return mtag, false, err
 	}
 
@@ -60,7 +63,6 @@ func GetFieldTag(field reflect.StructField) (MultiTag, bool, error) {
 		return mtag, true, nil
 	}
 
-	// Return the tag, and process the option
 	return mtag, false, nil
 }
 
